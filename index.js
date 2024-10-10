@@ -27,7 +27,7 @@ const urlSchema = new mongoose.Schema({
     required: true,
   },
   short_url: {
-    type: String,
+    type: Number,
   },
 });
 
@@ -76,11 +76,11 @@ const checkAndCreateShortUrl = async (inUrl, res) => {
 };
 
 //for directing users to original url
-const findOrigUrl = async (inUrl, res) => {
+const findOrigUrl = async (inUrl) => {
   const data = await siteURL.findOne({ short_url: inUrl });
 
   if (!data) {
-    res.json({ error: "no url found" });
+    return null;
   } else {
     return data.orig_url;
   }
