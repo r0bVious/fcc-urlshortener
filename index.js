@@ -3,6 +3,7 @@ const express = require("express");
 const cors = require("cors");
 const app = express();
 const mongoose = require("mongoose");
+const dns = require("dns");
 
 // Basic Configuration
 const port = process.env.PORT || 3000;
@@ -41,38 +42,45 @@ const checkAndCreateShortUrl = async (inUrl, res) => {
     return res.json({ error: "invalid url" });
   }
 
-  try {
-    // Check DB for existing URL
-    const data = await siteURL.findOne({ orig_url: inUrl });
-
-    if (data) {
-      // If URL exists, return the existing short URL
-      return res.json({
-        original_url: data.orig_url,
-        short_url: data.short_url,
-      });
-    } else {
-      // Increment short_url based on the number of existing documents
-      const count = await siteURL.countDocuments({});
-
-      const newShortUrlId = count + 1;
-
-      const newShortUrl = new siteURL({
-        orig_url: inUrl,
-        short_url: newShortUrlId,
-      });
-
-      const savedData = await newShortUrl.save();
-
-      return res.json({
-        original_url: savedData.orig_url,
-        short_url: savedData.short_url,
-      });
+  // Verify URL using dns.lookup
+  const host = new URL(inUrl).host; // Extract hostname from URL
+  dns.lookup(host, (err) => {
+    if (err) {
+      return res.json({ error: "invalid url" }); // Host does not resolve
     }
-  } catch (err) {
-    console.error("Error:", err);
-    res.status(500).json({ error: "Server error" });
-  }
+
+    // Proceed to check DB for existing URL
+    (async () => {
+      try {
+        const data = await siteURL.findOne({ orig_url: inUrl });
+
+        if (data) {
+          return res.json({
+            original_url: data.orig_url,
+            short_url: data.short_url,
+          });
+        } else {
+          const count = await siteURL.countDocuments({});
+          const newShortUrlId = count + 1;
+
+          const newShortUrl = new siteURL({
+            orig_url: inUrl,
+            short_url: newShortUrlId,
+          });
+
+          const savedData = await newShortUrl.save();
+
+          return res.json({
+            original_url: savedData.orig_url,
+            short_url: savedData.short_url,
+          });
+        }
+      } catch (err) {
+        console.error("Error:", err);
+        res.status(500).json({ error: "Server error" });
+      }
+    })();
+  });
 };
 
 //for directing users to original url
@@ -89,6 +97,7 @@ const findOrigUrl = async (inUrl) => {
 // Your first API endpoint
 app.post("/api/shorturl/", (req, res) => {
   const postedUrl = req.body.url;
+  console.log("Received URL:", postedUrl);
   return checkAndCreateShortUrl(postedUrl, res);
 });
 
