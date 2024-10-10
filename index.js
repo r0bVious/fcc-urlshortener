@@ -82,10 +82,7 @@ const findOrigUrl = async (inUrl, res) => {
   if (!data) {
     res.json({ error: "no url found" });
   } else {
-    return res.json({
-      original_url: data.orig_url,
-      short_url: data.short_url,
-    });
+    return data.orig_url;
   }
 };
 
@@ -95,9 +92,14 @@ app.post("/api/shorturl/", (req, res) => {
   return checkAndCreateShortUrl(postedUrl, res);
 });
 
-app.get("/api/shorturl/:inUrl", (req, res) => {
-  const shortUrl = req.params.inUrl;
-  return findOrigUrl(shortUrl, res);
+app.get("/api/shorturl/:inUrl", async (req, res) => {
+  inUrl = req.params.inUrl;
+  const longUrl = await findOrigUrl(inUrl);
+  if (longUrl) {
+    res.redirect(longUrl);
+  } else {
+    res.json({ error: "url not found" });
+  }
 });
 
 app.listen(port, function () {
