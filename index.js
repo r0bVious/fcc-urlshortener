@@ -93,7 +93,7 @@ app.post("/api/shorturl/", (req, res) => {
 });
 
 app.get("/api/shorturl/:inUrl", async (req, res) => {
-  inUrl = req.params.inUrl;
+  const inUrl = req.params.inUrl;
   const longUrl = await findOrigUrl(inUrl);
   if (longUrl) {
     res.redirect(longUrl);
