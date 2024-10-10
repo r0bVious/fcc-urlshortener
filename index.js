@@ -92,12 +92,12 @@ const findOrigUrl = async (inUrl, res) => {
 // Your first API endpoint
 app.post("/api/shorturl/", (req, res) => {
   const postedUrl = req.body.url;
-  checkAndCreateShortUrl(postedUrl, res);
+  return checkAndCreateShortUrl(postedUrl, res);
 });
 
 app.get("/api/shorturl/:inUrl", (req, res) => {
   const shortUrl = req.params.inUrl;
-  findOrigUrl(shortUrl, res);
+  return findOrigUrl(shortUrl, res);
 });
 
 app.listen(port, function () {
