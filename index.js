@@ -93,8 +93,14 @@ app.post("/api/shorturl/", (req, res) => {
 });
 
 app.get("/api/shorturl/:inUrl", async (req, res) => {
-  const inUrl = req.params.inUrl;
+  const inUrl = parseInt(req.params.inUrl);
+
+  if (isNaN(inUrl)) {
+    return res.status(400).json({ error: "Invalid short URL" });
+  }
+
   const longUrl = await findOrigUrl(inUrl);
+
   if (longUrl) {
     res.redirect(longUrl);
   } else {
