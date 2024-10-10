@@ -11,8 +11,8 @@ const mongoURI = process.env.MONGO_URI;
 
 // Middleware
 app.use(cors());
+app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 app.use("/public", express.static(`${process.cwd()}/public`));
 app.get("/", function (req, res) {
   res.sendFile(process.cwd() + "/views/index.html");
@@ -37,8 +37,9 @@ const urlSchema = new mongoose.Schema({
 const siteURL = mongoose.model("url", urlSchema);
 
 const dnsLookupAsync = (host) => {
+  const domain = new URL(url).hostname;
   return new Promise((resolve, reject) => {
-    dns.lookup(host, (err) => {
+    dns.lookup(domain, (err) => {
       if (err) {
         return reject(new Error("invalid url"));
       }
@@ -48,13 +49,13 @@ const dnsLookupAsync = (host) => {
 };
 
 const checkAndCreateShortUrl = async (inUrl, res) => {
-  // Check if valid URL using regex
-  const urlRegex = /^https?:\/\/www\./;
+  // Updated regex to allow only http or https URLs
+  const urlRegex = /^(https?:\/\/)(www\.)?[a-zA-Z0-9-]+\.[a-zA-Z]{2,}/;
   if (!urlRegex.test(inUrl)) {
     return res.json({ error: "invalid url" });
   }
 
-  // Verify URL using dns.lookup
+  // Proceed with DNS lookup to verify the URL
   const host = new URL(inUrl).host;
   try {
     await dnsLookupAsync(host);
@@ -62,10 +63,9 @@ const checkAndCreateShortUrl = async (inUrl, res) => {
     return res.json({ error: "invalid url" });
   }
 
-  // Proceed to check DB for existing URL
+  // Continue with DB lookup and creation logic
   try {
     const data = await siteURL.findOne({ orig_url: inUrl });
-
     if (data) {
       return res.json({
         original_url: data.orig_url,
@@ -74,14 +74,11 @@ const checkAndCreateShortUrl = async (inUrl, res) => {
     } else {
       const count = await siteURL.countDocuments({});
       const newShortUrlId = count + 1;
-
       const newShortUrl = new siteURL({
         orig_url: inUrl,
         short_url: newShortUrlId,
       });
-
       const savedData = await newShortUrl.save();
-
       return res.json({
         original_url: savedData.orig_url,
         short_url: savedData.short_url,
