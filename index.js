@@ -36,30 +36,39 @@ const urlSchema = new mongoose.Schema({
 
 const siteURL = mongoose.model("url", urlSchema);
 
-const dnsLookupAsync = (host) => {
-  const domain = new URL(url).hostname;
+const dnsLookupAsync = (inUrl) => {
+  const domain = new URL(inUrl).hostname;
+  console.log("Performing DNS lookup for", domain);
   return new Promise((resolve, reject) => {
     dns.lookup(domain, (err) => {
       if (err) {
+        console.log("DNS lookup failed:", err);
         return reject(new Error("invalid url"));
       }
+
+      console.log("dns lookup success");
       resolve();
     });
   });
 };
 
 const checkAndCreateShortUrl = async (inUrl, res) => {
-  // Updated regex to allow only http or https URLs
-  const urlRegex = /^(https?:\/\/)(www\.)?[a-zA-Z0-9-]+\.[a-zA-Z]{2,}/;
-  if (!urlRegex.test(inUrl)) {
-    return res.json({ error: "invalid url" });
-  }
+  // const urlRegex = /^(https?:\/\/)(www\.)?[a-zA-Z0-9-]+\.[a-zA-Z]{2,}(\S*)?$/;
+  // console.log("Checking URL:", inUrl);
+
+  // if (!urlRegex.test(inUrl)) {
+  //   console.log("regex error when checking:", inUrl);
+  //   return res.json({ error: "invalid url" });
+  // }
 
   // Proceed with DNS lookup to verify the URL
-  const host = new URL(inUrl).host;
+  const host = new URL(inUrl).hostname;
+  console.log("checkAndCreateShortUrl host value:", host);
+
   try {
-    await dnsLookupAsync(host);
+    await dnsLookupAsync(inUrl);
   } catch (err) {
+    console.log("dnslookup error");
     return res.json({ error: "invalid url" });
   }
 
@@ -103,7 +112,7 @@ const findOrigUrl = async (inUrl) => {
 
 app.post("/api/shorturl/", (req, res) => {
   const postedUrl = req.body.url;
-  console.log(postedUrl);
+  console.log("url posted:", postedUrl);
   checkAndCreateShortUrl(postedUrl, res);
 });
 
